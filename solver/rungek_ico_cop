@@ -1,0 +1,406 @@
+       SUBROUTINE RUNGEK()
+       use dimensiones
+       use consadim
+       use velocidades
+       use variables
+       use tiempo
+       use right
+       use jacobtools
+       use fieldrec
+       use vieu
+       use fronterapl
+       use mac_it
+       use combustion
+       use afluid
+       use flow
+       use maskvar
+       use mix_para
+       use multiphase
+       use sgdmodel
+       use mallagrid
+       IMPLICIT NONE
+       integer i,j,k,l,m,agrava,avieu,n
+       real xm,ue,dasum,dasum2,divmax, phisource
+
+
+        dto=0.0
+!        dt=0.0001
+        it=1
+        itf=1
+        itf2=1
+        igrava=0
+        ivieu=1
+        dgrava=dgrava1
+        tvieu=tvieu1
+        i_sample=0
+        CALL MAXVAL()
+        deltamin = minval(dmins)
+
+        write(*,*) "FDFDSFDSFDSFDSFDFDSFD",deltamin
+        CALL GRAVA ()
+        mncit=1
+
+        call heviside()
+        volphi0 = 0.0
+         do k=2,nz-1
+           do j=2,ny-1
+              do i=2,nx-1
+            volphi0 = volphi0                    &
+            + hevi(i,j,k)*mask(i,j,k)*           &
+              (x(i+1,j,k,1) - x(i-1,j,k,1))*0.5* &
+              (x(i,j+1,k,2) - x(i,j-1,k,2))*0.5* &
+              (x(i,j,k+1,3) - x(i,j,k-1,3))*0.5 
+              enddo
+           enddo
+         enddo
+
+
+
+
+        DO WHILE (dto.le.tmax)
+         CALL tstep()
+         write(6,101)'it=',it,' ','dt=',dt,' ','nc=',nc,' ','dtotal=',dto
+!______________________________________________________________________
+!  1
+         write(6,*)'1'
+!          write(6,*)dt,cs,nc
+         do m=1,nd
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          um(i,j,k,m)=um0(i,j,k,m)
+         enddo
+         enddo
+         enddo
+         enddo
+
+
+!*
+         DO n=1,nc
+
+!          INTEGRATION IN THE STRETCHED PSEUDOTIME
+!         LA PRESION (um(i,j,k,1)) AVANZA EN EL TIEMPO 
+!         PERO EL RESTO DE LAS VARIABLES SOLO SE CORRIGEN (um(i,j,k,m) m=2,3,4,5)
+          write(6,*)'n=',n
+          IF(n.ge.2)THEN
+           do m=2,nd
+            do k=1,nz
+             do j=1,ny
+              do i=1,nx
+               um(i,j,k,m)=um1(i,j,k,m)
+              enddo
+             enddo
+            enddo
+           enddo
+           do m=1,1
+            do k=1,nz
+             do j=1,ny
+              do i=1,nx
+               um0(i,j,k,m)=um1(i,j,k,m)
+               um(i,j,k,m)=um1(i,j,k,m)
+              enddo
+             enddo
+            enddo
+           enddo
+          ENDIF
+
+
+
+
+         CALL deriv_vel()
+         CALL viscosidad_t()
+         CALL viscosidad()
+
+         DO m=1,nd
+          CALL flujos(m)
+           CALL divergencia(m)!,1,mncit)
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+             um1(i,j,k,m)=um0(i,j,k,m)+  &
+                          dt*(rs(i,j,k)+rsv(i,j,k))
+            ENDDO
+           ENDDO
+          ENDDO
+           CALL source(1,m)
+
+         ENDDO
+        
+         CALL rushton()
+
+         CALL frontera_z_val (1)
+         CALL frontera_y_val (1)
+         CALL frontera_x_val (1)
+
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+            ! um1(i,j,k,1)=max(-5.0,um1(i,j,k,1))
+             um1(i,j,k,2)=min(7.0,um1(i,j,k,2))
+             um1(i,j,k,2)=max(-7.0,um1(i,j,k,2))
+             um1(i,j,k,3)=min(7.0,um1(i,j,k,3))
+             um1(i,j,k,3)=max(-7.0,um1(i,j,k,3))
+             um1(i,j,k,4)=min(7.0,um1(i,j,k,4))
+             um1(i,j,k,4)=max(-7.0,um1(i,j,k,4))
+             ENDDO
+           ENDDO
+          ENDDO
+
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+               um1(i,j,k,2)=um1(i,j,k,2)*mask(i,j,k)
+               um1(i,j,k,3)=um1(i,j,k,3)*mask(i,j,k)
+               um1(i,j,k,4)=um1(i,j,k,4)*mask(i,j,k)
+             ENDDO
+            ENDDO
+           ENDDO
+
+
+
+         CALL varc_to_varnc()
+         call advectLevelSet()
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+             if(phi(i,j,k).LT.0.0)then
+               pres(i,j,k)  = 1.0
+             endif
+               um1(i,j,k,1) = pres(i,j,k)
+               um1(i,j,k,2) = u(i,j,k,1)  
+               um1(i,j,k,3) = u(i,j,k,2)  
+               um1(i,j,k,4) = u(i,j,k,3)  
+             
+             ENDDO
+            ENDDO
+          ENDDO
+        
+
+         do m=1,nd
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          um(i,j,k,m)=um1(i,j,k,m)
+         enddo
+         enddo
+         enddo
+         enddo
+
+        call heviside()
+        volphi = 0.0
+         do k=2,nz-1
+           do j=2,ny-1
+              do i=2,nx-1
+            volphi = volphi                      &
+            + hevi(i,j,k)*mask(i,j,k)*           &
+              (x(i+1,j,k,1) - x(i-1,j,k,1))*0.5* &
+              (x(i,j+1,k,2) - x(i,j-1,k,2))*0.5* &
+              (x(i,j,k+1,3) - x(i,j,k-1,3))*0.5 
+              enddo
+           enddo
+         enddo
+
+         phisource = (volphi0 - volphi)/ (3.1415926*1.5*1.5)
+         write(6,*) 'PHI SOURCE ------>', phisource
+         write(6,*) 'Vol0 ------>', volphi0
+
+
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          phi(i,j,k)=phi(i,j,k) + (phisource*mask(i,j,k))
+         enddo
+         enddo
+         enddo
+
+         
+
+
+
+!______________________________________________________________________
+!  2
+
+         write(6,*)'2'
+
+         CALL deriv_vel()
+         CALL viscosidad_t()
+         CALL viscosidad()
+         DO m=1,nd
+          CALL flujos(m)
+           CALL divergencia(m)!,2,mncit)
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+             um1(i,j,k,m)=0.5*(um(i,j,k,m)+  &
+                          um0(i,j,k,m))+ &
+                          0.5*dt*(rs(i,j,k)+rsv(i,j,k))
+            ENDDO
+           ENDDO
+          ENDDO
+           CALL source(2,m)
+
+         ENDDO
+
+         CALL rushton()
+
+         CALL frontera_z_val (2)
+         CALL frontera_y_val (2)
+         CALL frontera_x_val (2)
+
+
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+           !  um1(i,j,k,1)=min(5.0,um1(i,j,k,1))
+             um1(i,j,k,2)=min(7.0,um1(i,j,k,2))
+             um1(i,j,k,2)=max(-7.0,um1(i,j,k,2))
+             um1(i,j,k,3)=min(7.0,um1(i,j,k,3))
+             um1(i,j,k,3)=max(-7.0,um1(i,j,k,3))
+             um1(i,j,k,4)=min(7.0,um1(i,j,k,4))
+             um1(i,j,k,4)=max(-7.0,um1(i,j,k,4))
+             ENDDO
+           ENDDO
+          ENDDO
+
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+               um1(i,j,k,2)=um1(i,j,k,2)*mask(i,j,k)
+               um1(i,j,k,3)=um1(i,j,k,3)*mask(i,j,k)
+               um1(i,j,k,4)=um1(i,j,k,4)*mask(i,j,k)
+             ENDDO
+            ENDDO
+           ENDDO
+
+        
+
+         IF(itf.eq.1) THEN
+           Write(6,*) 'FILTRADO' , itf
+           CALL FILTRADO(itf,mncit)
+           itf=itf+1
+         ELSE
+           itf=itf+1
+           if(itf.eq.10) itf=1
+         ENDIF
+
+         CALL varc_to_varnc()
+         call advectLevelSet()
+
+          DO k=1,nz
+           DO j=1,ny
+            DO i=1,nx
+             if(phi(i,j,k).LT.0.0)then
+               pres(i,j,k)  = 1.0
+             endif
+               um1(i,j,k,1) = pres(i,j,k)
+               um1(i,j,k,2) = u(i,j,k,1)  
+               um1(i,j,k,3) = u(i,j,k,2)  
+               um1(i,j,k,4) = u(i,j,k,3)  
+             
+             ENDDO
+            ENDDO
+          ENDDO
+
+
+        call heviside()
+        volphi = 0.0
+         do k=2,nz-1
+           do j=2,ny-1
+              do i=2,nx-1
+            volphi = volphi                      &
+            + hevi(i,j,k)*mask(i,j,k)*           &
+              (x(i+1,j,k,1) - x(i-1,j,k,1))*0.5* &
+              (x(i,j+1,k,2) - x(i,j-1,k,2))*0.5* &
+              (x(i,j,k+1,3) - x(i,j,k-1,3))*0.5 
+              enddo
+           enddo
+         enddo
+
+         phisource = (volphi0 - volphi)/ (3.1415926*1.5*1.5)
+
+         write(6,*) 'PHI SOURCE ------>', phisource
+         write(6,*) 'Vol ------->', volphi0
+
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          phi(i,j,k)=phi(i,j,k) + phisource*mask(i,j,k)
+         enddo
+         enddo
+         enddo
+
+
+
+         ENDDO
+!*
+
+
+
+         do m=1,nd
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          um0(i,j,k,m)=um1(i,j,k,m)
+         enddo
+         enddo
+         enddo
+         enddo
+
+!-------Runge Kutta ending
+
+         dasum=0.0
+         dasum2=0.0
+         divmax=0.0
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          dasum=dasum+((pres(i,j,k)-pres0(i,j,k))/pres(i,j,k))**2.
+          dasum2=((pres(i,j,k)-pres0(i,j,k))/pres(i,j,k))**2.
+          if(abs(dasum2).gt.divmax)divmax=dasum2
+         enddo
+         enddo
+         enddo
+          Write(6,*)'Diferencia presion Media  =',sqrt(dasum/float(nx*ny*nz))/(cs*cs*float(nc))
+          Write(6,*)'Diferencia presion Maxima =',sqrt(divmax)/(cs*cs*float(nc))
+
+         do k=1,nz
+         do j=1,ny
+         do i=1,nx
+          pres0(i,j,k)=pres(i,j,k)
+         enddo
+         enddo
+         enddo
+
+
+         CALL ESTADISTICAS()
+
+        mncit=mncit+1
+        if(mncit.eq.9)mncit=1
+        write(6,*)mncit
+
+        avieu=int(dto/tvieu)
+        IF(avieu.ge.1) THEN
+         CALL MAXVAL()
+         ivieu=ivieu+1
+         tvieu=float(ivieu)*tvieu1
+        endif
+
+        agrava=int(dto/dgrava)
+        IF(agrava.ge.1) THEN
+        CALL GRAVA ()
+        ENDIF
+         
+         dto=dto+sqrt(float(nc))*dt
+         it=it+1
+        ENDDO
+        CALL GRAVA ()
+
+        RETURN
+ 101    FORMAT(a3,i6,a1,a3,e12.4,a1,a3,i2,a1,a7,e12.4)
+        END SUBROUTINE RUNGEK
+

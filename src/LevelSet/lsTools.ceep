@@ -1,0 +1,59 @@
+#ifndef _WOMEGAS_H
+#define _WOMEGAS_H
+
+__global__ void Dev1thO_Downwind(
+                                double* const d_Phi,
+                                const double* const phiS,
+                                const double deltaX,
+                                const double deltaY,
+                                const double deltaZ,
+                                const unsigned int Nx, 
+                                const unsigned int Ny, 
+                                const unsigned int Nz
+                                );  
+
+
+__global__ void PhiDevPlusParameter(
+                                    double* const phi_xyz,
+                                    const double* const d_Phi,
+                                    const double* const jbn,
+                                    unsigned const int Nx,
+                                    unsigned const int Ny,
+                                    unsigned const int Nz
+                                    );
+
+__global__ void PhiDevMinusParameter(
+                                    double* const phi_xyz,
+                                    const double* const d_Phi,
+                                    const double* const jbn,
+                                    unsigned const int Nx,
+                                    unsigned const int Ny,
+                                    unsigned const int Nz
+                                    );
+
+__global__ void reini_RS_WENO(
+                             double* const rs,
+                             const double* const phiS,
+                             const double* const phiS0,
+                             const double* const deltaXYZ,
+                             const double* const d_phiP,
+                             const double* const d_phiM,
+                             const double* const phiS0,
+                             unsigned int Nx,
+                             unsigned int Ny,
+                             unsigned int Nz
+                             );
+
+__global__ void advect_RS_WENO(
+                              double* const rs,
+                              const double* const velocity,
+                              const double* const d_phiP_d,
+                              const double* const d_phiM_d,
+                              unsigned int Nx, 
+                              unsigned int Ny, 
+                              unsigned int Nz
+                              );
+
+
+
+#endif
