@@ -11,10 +11,8 @@ INCLUDE = ../include/\
 #CUDA: COMPILER AND OPTIONS
 
 CUDAC     =  nvcc
-##LIBS      = -L/usr/local/cuda-8.0/lib64 -lcuda -lcudart
 LIBS      = -lcuda -lcudart
-##INCLUDECU = -I /usr/local/cuda-8.0/include 
-CUOPTION  = -O3 --gpu-architecture=compute_75
+CUOPTION  = -O3 --gpu-architecture=compute_70
 
 OBJS=\
 flow_mod_incomp2.o\

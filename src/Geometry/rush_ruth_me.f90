@@ -53,7 +53,7 @@
       if(sub_step.EQ.2) dtime = dto + 0.5d0*dt
       if(sub_step.EQ.3) dtime = dto + dt
 
-      ancho = 3.d0*1.0d0*dmin
+      ancho = 1.5d0*dmin
  
       write(6,*) dto, dtime
 
@@ -91,7 +91,7 @@
       CALL addMAskCil(maskRush, x, 0.0, 0.375, (1.05d0 - 1.0*ancho), &
                      (1.05d0 + 1.0*ancho), Nx, Ny, Nz) 
 
-      CALL addMAskCil(maskRush, x, 0.0d0, 0.07895d0, 1.05d0, &
+      CALL addMAskCil(maskRush, x, 0.0d0, 0.04d0, 1.05d0, &
                       5.d0, Nx, Ny, Nz) 
 
       CALL addAngularVel(um1, x, maskRush, -1.0*Ro, Nx, Ny, Nz)
