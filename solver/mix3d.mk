@@ -1,19 +1,20 @@
-EXENAME  = ~/Procesamiento/ART01/RUSTHON/eMix.run
+EXENAME  = ~/Procesamiento/ART01/RUSHTON/eMix.run
 FC       =  ifort 
 FFLAGS   =  -O3  -r8 -w
 
-SRCPATH  =  /home/dposadasn/MULTIPLE_IMPELLERS/src
+SRCPATH  =  ../src
 COREPATH =  $(SRCPATH)/MSVSingle
 
-INCLUDE = /home/dposadasn/MULTIPLE_IMPELLERS/include/\
+INCLUDE = ../include/\
  -I$(SRCPATH)
 
 #CUDA: COMPILER AND OPTIONS
 
 CUDAC     =  nvcc
-LIBS      = -L/usr/local/cuda-8.0/lib64 -lcuda -lcudart
-INCLUDECU = -I /usr/local/cuda-8.0/include 
-CUOPTION  = -O3 --gpu-architecture=compute_35
+##LIBS      = -L/usr/local/cuda-8.0/lib64 -lcuda -lcudart
+LIBS      = -lcuda -lcudart
+##INCLUDECU = -I /usr/local/cuda-8.0/include 
+CUOPTION  = -O3 --gpu-architecture=compute_75
 
 OBJS=\
 flow_mod_incomp2.o\
