@@ -8,7 +8,7 @@ COREPATH =  $(SRCPATH)/MSVSingle
 INCLUDE = ../include/\
  -I$(SRCPATH)
 
-#CUDA: COMPILER AND OPTIONS
+#CUDA: COMPILER AND OPTIONS TODO
 
 CUDAC     =  nvcc
 LIBS      = -lcuda -lcudart
